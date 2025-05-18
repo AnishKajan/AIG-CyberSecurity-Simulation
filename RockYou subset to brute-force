@@ -1,0 +1,50 @@
+"""
+Forage AIG Cybersecurity Program – Task 2
+Brute-forces the password for enc.zip using rockyou.txt
+Compatible with Python 3.8+
+"""
+
+from zipfile import ZipFile
+from pathlib import Path
+import sys
+
+WORDLIST = Path("rockyou.txt")
+ARCHIVE  = Path("enc.zip")
+OUTPUT_DIR = Path("decrypted")
+
+def attempt_extract(zf: ZipFile, pw: bytes) -> bool:
+    """
+    Try to extract the archive with a single password.
+    Returns True on success, False otherwise.
+    """
+    try:
+        zf.extractall(path=OUTPUT_DIR, pwd=pw)
+        return True
+    except RuntimeError:
+        return False          # Wrong password (Bad password for file)
+    except Exception as err:
+        # Any other zip-related error; display and continue
+        print(f"[!] Error with password {pw!r}: {err}")
+        return False
+
+def main():
+    if not WORDLIST.exists() or not ARCHIVE.exists():
+        sys.exit("[!] rockyou.txt or enc.zip not found in current directory")
+
+    OUTPUT_DIR.mkdir(exist_ok=True)
+
+    print("[+] Beginning brute-force …")
+    with ZipFile(ARCHIVE) as zf, WORDLIST.open("rb") as wl:
+        for line in wl:
+            pw = line.strip()          # bytes
+            if not pw:                 # skip blanks
+                continue
+            if attempt_extract(zf, pw):
+                print(f"[✓] Password found → {pw.decode(errors='ignore')}")
+                print(f"[+] Files extracted to: {OUTPUT_DIR.resolve()}")
+                break
+        else:
+            print("[-] Password not found in provided wordlist")
+
+if __name__ == "__main__":
+    main()
